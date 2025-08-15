@@ -1,101 +1,97 @@
-# PySurf
+# 🌊 PySurf – Your Minimalist Python Browser
 
-PySurf is a lightweight custom web browser built using Python and PyQt5. It supports multiple tabs, homepage search, website shortcuts, and a simple, clean interface.
+**PySurf** is a sleek, lightweight web browser built with **Python** and **PyQt5**, designed for speed, simplicity, and customization. Open multiple tabs, save bookmarks and shortcuts, and surf the web your way—all in one clean interface.
 
 ---
 
 ## 🚀 Features
 
-- 🔖 **Tabbed browsing** with back, forward, and refresh controls  
-- 🏠 **Custom homepage** with Google search  
-- 📌 **Add/delete website shortcuts** from the homepage  
-- 🎨 **Clean UI** with global Arial font  
+- 🔖 **Tabbed Browsing** – Open and switch between multiple sites seamlessly  
+- 🏠 **Custom Homepage** – Google search + personal website shortcuts  
+- 📌 **Quick Shortcuts and boomarks** – Add, remove, and organize your favorite sites easily   
+- 🎨 **Clean, Minimal UI** – Modern design with Segoe UI font  
+- 🛠️ **Customizable Settings** – Save preferences and startup options  
+- 🌐 **Full Navigation Controls** – Back, forward, refresh for every tab
+- 🛠️ **Downloads support** - Download files from the internet, and manage them easily in one window
+- 🛠️ **Fullscreen support** - Full screen support on all websites, or by pressing F11 on your keyboard
 
 ---
 
-## 🖼️ PySurf UI Components Explained
-
----
+## 🖥️ PySurf UI Overview
 
 ### 🔵 Main Window
 
-- The overall app window titled **"PySurf"**.  
-- Contains the **"New Tab"** button at the top and a **tabbed browsing area** below it.
-
----
+- The main app window titled **"PySurf"**  
+- Contains a **"New Tab"** button and a **tabbed browsing area**  
+- Ready for quick browsing sessions
 
 ### 🔘 "New Tab" Button
 
-- Located above the tabs.  
-- When clicked, opens a **new homepage tab**.  
-- Always visible for easy access to start new sessions.
-
----
+- Opens a **fresh homepage tab**  
+- Always visible for starting new sessions
 
 ### 🗂️ Tab Area (`QTabWidget`)
 
-- Where all your browser content lives.  
-- Each tab can contain either:
-    - A **homepage layout**.  
-    - A **web page** opened from a search or shortcut.  
-- Tabs include a **✕ (close button)** to close them.
+- Each tab shows either the **homepage** or a **web page**  
+- Tabs include a **✕ button** to close them  
 
 ---
 
 ### 🏠 Homepage Tab
 
-Every time a "New Tab" is opened, it loads this homepage, which contains:
+The heart of PySurf when opening a new tab:
 
-#### 🧭 1. Title Label
+#### 🧭 Title Label
 
-- Displays **"PySurf Search"** in a large, centered font.  
-- Gives your browser its identity.
+- Shows **"PySurf Search"** prominently  
+- Establishes the browser’s identity  
 
-#### 🔎 2. Search Bar
+#### 🔎 Search Bar
 
-- A text input field labeled **"Search for anything..."**  
-- Users type in a query here.
+- Type your query into **"Search for anything..."**  
+- Press **Enter** or the **Search button**  
 
-#### 🔘 3. Search Button
+#### 🔘 Search Button
 
-- Triggers a **Google search** with the typed query.  
-- Opens results in a **new tab**.
+- Opens Google search results in a **new tab**  
 
 ---
 
 ### 🔗 Shortcut Row
 
-- Horizontal row of buttons representing **quick-access websites**.  
-- Starts with built-in shortcuts like **YouTube** and **Google**.
+Quick-access buttons for your favorite sites:
 
-#### ➕ "Add Shortcut" Button
+#### ➕ Add Shortcut
 
-- Opens a **dialog box** to add a custom shortcut.  
-- Dialog has:
-    - A field for **name** (e.g., "Reddit")  
-    - A field for **URL** (must include `https://`)  
-    - An **OK** button to confirm.
+- Opens a dialog to add:  
+  - **Name** (e.g., Reddit)  
+  - **URL** (must start with `https://`)  
+  - Confirm with **OK**  
 
-#### 🖱️ Right-Click to Delete Shortcut
+#### 🖱️ Delete Shortcut
 
-- Every shortcut button supports **right-clicking**.  
-- A **context menu** appears with the option **"Delete"**.  
-- Clicking "Delete" **removes the shortcut** from the homepage.
+- Right-click a shortcut button to remove it instantly  
 
 ---
 
 ### 🌐 Web Page Tab
 
-When a site is opened (via search or shortcut), it loads into a full browser tab with:
+Full browser experience when visiting a site:
 
-#### ◀️▶️🔄 Navigation Buttons
+#### ◀️▶️🔄 Navigation
 
-- **Back**: Takes you to the previous page.  
-- **Forward**: Moves ahead in browsing history.  
-- **Refresh**: Reloads the current page.
+- **Back**: Go to the previous page  
+- **Forward**: Move ahead in history  
+- **Refresh**: Reload the current page  
 
-#### 🧭 Address Area (implicitly handled)
+#### 🧭 Address Handling
 
-- The current page’s **URL updates the tab’s title** dynamically.
+- Tab titles update automatically with the page’s URL  
 
 ---
+
+## ✨ Why PySurf?
+
+- Lightweight browsing without unnecessary bloat  
+- Easy to customize and navigate quickly  
+- Built with **Python**, ideal for learners and developers  
