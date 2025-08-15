@@ -19,6 +19,8 @@
 
 ## 🖥️ PySurf UI Overview
 
+
+
 ### 🔵 Main Window
 
 - The main app window titled **"PySurf"**  
@@ -40,6 +42,7 @@
 ### 🏠 Homepage Tab
 
 The heart of PySurf when opening a new tab:
+<img width="1919" height="1032" alt="Snimka zaslona 2025-08-13 132010" src="https://github.com/user-attachments/assets/c3a13c4b-9dc1-45f6-b302-792bbfeedb3b" />
 
 #### 🧭 Title Label
 
