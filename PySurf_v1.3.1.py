@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QLineEdit, QPushButton, 
                              QHBoxLayout, QWidget, QLabel, QTabWidget, QMenu, QAction, QDialog,
                              QToolButton, QFileDialog, QShortcut, QFrame, QScrollArea, QProgressBar)
 from PyQt5.QtWebEngineWidgets import (QWebEngineView, QWebEngineDownloadItem, QWebEngineProfile,
-                                     QWebEngineSettings, QWebEnginePage)
+                                      QWebEngineSettings, QWebEnginePage)
 from PyQt5.QtCore import Qt, QTimer, QUrl, QSize, QProcess
 from PyQt5.QtGui import QKeySequence, QFont, QCursor, QIcon
 import sys, os, json, html
@@ -14,8 +14,7 @@ SHORTCUTS_FILE = "shortcuts.json"
 BOOKMARKS_FILE = "bookmarks.json"
 HISTORY_FILE = "history.json"
 DOWNLOADS_FILE = "downloads.json"
-
-# --- Utility Functions ---
+ICON_PATH = "C:/Users/vitoh/PySurf_Dev/PySurf_v1.3.0/Icons/"
 
 def create_separator():
     separator = QFrame()
@@ -25,18 +24,16 @@ def create_separator():
 
 def load_data(filename, default_data=[]):
     if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as f:
-            try:
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
                 return json.load(f)
-            except json.JSONDecodeError:
-                return default_data
+        except (json.JSONDecodeError, FileNotFoundError):
+            return default_data
     return default_data
 
 def save_data(data, filename):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
-
-# --- Global Application and Dialogs (Order Fixed) ---
 
 app = QApplication(sys.argv)
 app.setWindowIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.2.0/PySurf_Icon.ico"))
@@ -60,7 +57,6 @@ QProgressBar {border: 1px solid grey; border-radius: 5px; text-align: center;}
 QProgressBar::chunk {background-color: #5d9cec;}
 """)
 
-# Our custom, manual list to track active downloads
 downloads_list = {}
 
 class DownloadsDialog(QDialog):
@@ -85,36 +81,30 @@ class DownloadsDialog(QDialog):
         self.main_layout.addWidget(scroll_area)
         
     def refresh_downloads(self):
-        # Clear existing widgets
         for i in reversed(range(self.downloads_layout.count())):
             widget = self.downloads_layout.itemAt(i).widget()
             if widget:
                 widget.deleteLater()
 
-        # Combine active downloads and persistent downloads
         all_downloads = list(downloads_list.values()) + self.main_window.downloads_data
 
-        # Add updated downloads items
         for download_info in all_downloads:
             frame = QFrame()
             frame.setObjectName("DownloadItem")
             layout = QHBoxLayout(frame)
-            
-            # File name and status
+
             file_name = os.path.basename(download_info['path'])
             name_label = QLabel(file_name)
             layout.addWidget(name_label)
-            
-            # Progress bar for in-progress downloads
+
             if download_info['state'] == QWebEngineDownloadItem.DownloadInProgress:
                 progress_bar = QProgressBar()
-                
-                # --- Fix 1: Progress bar and size display ---
+
                 if download_info['total_bytes'] > 0:
                     progress_bar.setValue(int(download_info.get('progress', 0) * 100))
                     status_text = f"{download_info['received_mb']:.2f} MB / {download_info['total_mb']:.2f} MB"
                 else:
-                    progress_bar.setRange(0, 0) # Indeterminate progress bar
+                    progress_bar.setRange(0, 0)
                     status_text = f"{download_info['received_mb']:.2f} MB / Unknown Size"
                 
                 status_label = QLabel(status_text)
@@ -122,7 +112,6 @@ class DownloadsDialog(QDialog):
                 layout.addWidget(progress_bar)
                 layout.addWidget(status_label)
 
-                # --- Fix 2: Pause/Resume button text and checked state ---
                 pause_btn = QPushButton("Pause")
                 pause_btn.setCheckable(True)
                 if download_info['q_object'].isPaused():
@@ -135,7 +124,6 @@ class DownloadsDialog(QDialog):
                 cancel_btn = QPushButton("Cancel")
                 cancel_btn.clicked.connect(lambda ch, d=download_info['q_object']: self.main_window.cancel_download(d))
                 layout.addWidget(cancel_btn)
-                # --------------------------------------------------------
 
             else:
                 status_text = {
@@ -149,7 +137,6 @@ class DownloadsDialog(QDialog):
                 layout.addStretch()
                 layout.addWidget(status_label)
 
-                # Show in Folder Button for finished downloads
                 if download_info['state'] == QWebEngineDownloadItem.DownloadCompleted:
                     show_folder_btn = QPushButton("Show in Folder")
                     show_folder_btn.clicked.connect(lambda ch, p=download_info['path']: self.main_window.show_in_folder(p))
@@ -241,13 +228,11 @@ class HistoryDialog(QDialog):
         self.main_layout.addWidget(scroll_area)
         
     def refresh_history(self):
-        # Clear existing widgets
         for i in reversed(range(self.history_layout.count())):
             widget = self.history_layout.itemAt(i).widget()
             if widget:
                 widget.deleteLater()
 
-        # Add updated history items
         for title, url in self.main_window.history_data:
             history_item_frame = QFrame()
             history_item_frame.setObjectName("HistoryItem")
@@ -285,213 +270,17 @@ class ShortcutButton(QPushButton):
         menu.addAction(delete)
         menu.exec_(e.globalPos())
 
-# --- Core Browser Classes ---
-
-class BrowserTab(QWidget):
-    def __init__(self, parent, url_string, main_window):
+class HomePage(QWidget):
+    def __init__(self, main_window, parent=None):
         super().__init__(parent)
-        self.url_bar = QLineEdit()
-        self.browser = QWebEngineView()
-        self.bookmarks_menu = QMenu()
-        self.parent_tabs = parent
         self.main_window = main_window
 
-        self.find_dialog = FindDialog(self.browser)
-        self.find_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
-        self.find_shortcut.activated.connect(self.find_dialog.show)
-
-        self.setup_ui(url_string)
-
-    def zoom_in(self):
-        zoom = self.browser.zoomFactor()
-        new_zoom = min(zoom + 0.25, 3.0)
-        self.browser.setZoomFactor(new_zoom)
-
-    def zoom_out(self):
-        zoom = self.browser.zoomFactor()
-        new_zoom = max(zoom - 0.25, 0.25)
-        self.browser.setZoomFactor(new_zoom)
-    
-    def add_page_to_history(self):
-        title = self.browser.page().title()
-        url = self.browser.url().toString()
-        self.main_window.add_page_to_global_history(title, url)
-
-    def setup_ui(self, url_string):
-        sidebar = QVBoxLayout()
+        main_layout = QVBoxLayout(self)
+        main_layout.setAlignment(Qt.AlignCenter)
         
-        back_btn = QPushButton()
-        back_btn.setIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.3.0/Icons/Back_Icon.svg"))
-        back_btn.setIconSize(QSize(24, 24))
-        sidebar.addWidget(back_btn)
-        
-        forward_btn = QPushButton()
-        forward_btn.setIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.3.0/Icons/Forward_Icon.svg"))
-        forward_btn.setIconSize(QSize(24, 24))
-        sidebar.addWidget(forward_btn)
-        
-        refresh_btn = QPushButton()
-        refresh_btn.setIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.3.0/Icons/Refresh_Icon.svg"))
-        refresh_btn.setIconSize(QSize(24, 24))
-        sidebar.addWidget(refresh_btn)
-
-        sidebar.addWidget(create_separator())
-        
-        bookmarks_btn = QToolButton()
-        bookmarks_btn.setIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.3.0/Icons/Bookmarks_Icon.svg"))
-        bookmarks_btn.setIconSize(QSize(24, 24))
-        bookmarks_btn.setPopupMode(QToolButton.InstantPopup)
-        bookmarks_btn.setMenu(self.bookmarks_menu)
-        sidebar.addWidget(bookmarks_btn)
-        
-        downloads_btn = QToolButton()
-        downloads_btn.setIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.3.0/Icons/Downloads_Icon.svg"))
-        downloads_btn.setIconSize(QSize(24, 24))
-        downloads_btn.clicked.connect(self.main_window.show_downloads_dialog)
-        sidebar.addWidget(downloads_btn)
-
-        history_btn = QPushButton()
-        history_btn.setIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.3.0/Icons/History_Icon.svg"))
-        history_btn.setIconSize(QSize(24, 24))
-        history_btn.clicked.connect(self.main_window.show_history_dialog) 
-        sidebar.addWidget(history_btn)
-
-        sidebar.addWidget(create_separator())
-
-        zoom_in_btn = QToolButton()
-        zoom_in_btn.setIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.3.0/Icons/Zoom_In_Icon.svg"))
-        zoom_in_btn.setIconSize(QSize(24, 24))
-        zoom_in_btn.clicked.connect(self.zoom_in)
-        sidebar.addWidget(zoom_in_btn)
-
-        zoom_out_btn = QToolButton()
-        zoom_out_btn.setIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.3.0/Icons/Zoom_Out_Icon.svg"))
-        zoom_out_btn.setIconSize(QSize(24, 24))
-        zoom_out_btn.clicked.connect(self.zoom_out)
-        sidebar.addWidget(zoom_out_btn)
-        
-        sidebar.addStretch()
-        
-        url_layout = QHBoxLayout()
-        url_layout.addWidget(self.url_bar)
-
-        content_layout = QVBoxLayout()
-        content_layout.addLayout(url_layout)
-        content_layout.addWidget(self.browser)
-
-        main_layout = QHBoxLayout()
-        main_layout.addLayout(content_layout)
-        main_layout.addLayout(sidebar)
-        
-        self.setLayout(main_layout)
-
-        self.browser.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
-        self.browser.page().fullScreenRequested.connect(self.handle_fullscreen_request)
-        self.browser.urlChanged.connect(self.update_url_bar)
-        self.browser.loadFinished.connect(self.update_tab_title)
-        
-        self.url_bar.returnPressed.connect(self.navigate)
-        back_btn.clicked.connect(self.browser.back)
-        forward_btn.clicked.connect(self.browser.forward)
-        refresh_btn.clicked.connect(self.browser.reload)
-
-        self.browser.load(QUrl(url_string))
-        self.refresh_bookmarks_menu()
-        
-        self.browser.loadFinished.connect(self.add_page_to_history)
-
-    def navigate(self):
-        text = self.url_bar.text()
-        if "." not in text:
-            text = "https://www.google.com/search?q=" + text
-        if not text.startswith("http"):
-            text = "https://" + text
-        self.browser.load(QUrl(text))
-    
-    def update_url_bar(self, qurl):
-        self.url_bar.setText(qurl.toString())
-    
-    def update_tab_title(self):
-        index = self.parent_tabs.indexOf(self)
-        self.browser.page().runJavaScript("document.title", lambda title: self.parent_tabs.setTabText(index, title or "New Tab"))
-
-    def handle_fullscreen_request(self, request):
-        if request.toggleOn():
-            window.showFullScreen()
-        else:
-            window.showNormal()
-        request.accept()
-
-    def add_current_to_bookmarks(self):
-        bookmarks_data = load_data(BOOKMARKS_FILE, default_data=[])
-        title = self.browser.title()
-        current_url = self.browser.url().toString()
-        if not any(bm[1] == current_url for bm in bookmarks_data):
-            bookmarks_data.append([title, current_url])
-            save_data(bookmarks_data, BOOKMARKS_FILE)
-            self.refresh_bookmarks_menu()
-
-    def remove_bookmark(self, url_to_remove):
-        bookmarks_data = load_data(BOOKMARKS_FILE, default_data=[])
-        bookmarks_data = [bm for bm in bookmarks_data if bm[1] != url_to_remove]
-        save_data(bookmarks_data, BOOKMARKS_FILE)
-        self.refresh_bookmarks_menu()
-
-    def refresh_bookmarks_menu(self):
-        self.bookmarks_menu.clear()
-        add_action = QAction("Add This Page to Bookmarks", self.bookmarks_menu)
-        add_action.triggered.connect(self.add_current_to_bookmarks)
-        self.bookmarks_menu.addAction(add_action)
-        self.bookmarks_menu.addSeparator()
-        for name, link in load_data(BOOKMARKS_FILE, default_data=[]):
-            action = QAction(name, self.bookmarks_menu)
-            action.triggered.connect(lambda ch, u=link: self.browser.load(QUrl(u)))
-            submenu = QMenu()
-            delete_action = QAction("Delete", submenu)
-            delete_action.triggered.connect(lambda ch=False, u=link: self.remove_bookmark(u))
-            submenu.addAction(delete_action)
-            action.setMenu(submenu)
-            self.bookmarks_menu.addAction(action)
-
-class MyMainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.resize(1200, 700)
-        
-        main_container = QWidget()
-        main_layout = QVBoxLayout(main_container)
-        
-        self.tabs = QTabWidget()
-        self.tabs.setTabsClosable(True)
-        self.tabs.tabCloseRequested.connect(self.close_tab)
-
-        plus_button = QToolButton()
-        plus_button.setText("+")
-        plus_button.clicked.connect(self.create_homepage)
-        self.tabs.setCornerWidget(plus_button)
-        
-        main_layout.addWidget(self.tabs)
-        self.setCentralWidget(main_container)
-        
-        self.history_data = load_data(HISTORY_FILE, default_data=[])
-        self.history_dialog = HistoryDialog(self)
-
-        self.downloads_data = load_data(DOWNLOADS_FILE, default_data=[])
-        self.downloads_dialog = DownloadsDialog(self)
-        
-        self.create_homepage()
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_F11:
-            if self.isFullScreen():
-                self.showNormal()
-            else:
-                self.showFullScreen()
-
-    def create_homepage(self):
         title_label = QLabel("PySurf Search")
         title_label.setFont(QFont("Segoe UI", 48))
-        title_label.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        title_label.setAlignment(Qt.AlignCenter)
         
         search_bar = QLineEdit()
         search_bar.setPlaceholderText("Search for anything...")
@@ -503,7 +292,7 @@ class MyMainWindow(QMainWindow):
         def search():
             query = search_bar.text().strip()
             if query:
-                self.open_site("https://www.google.com/search?q=" + query)
+                self.main_window.open_new_tab("https://www.google.com/search?q=" + query)
 
         search_button.clicked.connect(search)
         search_bar.returnPressed.connect(search)
@@ -518,7 +307,7 @@ class MyMainWindow(QMainWindow):
             btn.setParent(None)
 
         def add_shortcut_dialog():
-            dialog = QDialog()
+            dialog = QDialog(self)
             dialog.setWindowTitle("Add Shortcut")
             dialog.setFixedSize(300, 150)
             name_input = QLineEdit()
@@ -534,7 +323,7 @@ class MyMainWindow(QMainWindow):
                     shortcuts_data.append([name, url])
                     save_data(shortcuts_data, SHORTCUTS_FILE)
                     button = ShortcutButton(name, url, remove_shortcut)
-                    button.clicked.connect(lambda ch, u=url: self.open_site(u))
+                    button.clicked.connect(lambda ch, u=url: self.main_window.open_new_tab(u))
                     shortcuts_layout.addWidget(button)
                     dialog.accept()
             ok_button.clicked.connect(on_ok)
@@ -551,32 +340,257 @@ class MyMainWindow(QMainWindow):
 
         for name, url in shortcuts_data:
             button = ShortcutButton(name, url, remove_shortcut)
-            button.clicked.connect(lambda ch, u=url: self.open_site(u))
+            button.clicked.connect(lambda ch, u=url: self.main_window.open_new_tab(u))
             shortcuts_layout.addWidget(button)
 
-        main_layout = QVBoxLayout()
         main_layout.addWidget(title_label)
         main_layout.addWidget(search_bar)
         main_layout.addLayout(shortcuts_layout)
         main_layout.addWidget(search_button)
+
+class BrowserTab(QWidget):
+    def __init__(self, parent, url_string, main_window):
+        super().__init__(parent)
+        self.browser = QWebEngineView()
+        self.parent_tabs = parent
+        self.main_window = main_window
+
+        self.find_dialog = FindDialog(self.browser)
+        self.find_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        self.find_shortcut.activated.connect(self.find_dialog.show)
+
+        content_layout = QVBoxLayout(self)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.addWidget(self.browser)
         
-        homepage_widget = QWidget()
-        homepage_widget.setLayout(main_layout)
+        self.browser.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+        self.browser.page().fullScreenRequested.connect(self.handle_fullscreen_request)
+        self.browser.urlChanged.connect(self.update_url_bar_on_main_window)
+        self.browser.loadFinished.connect(self.update_tab_title)
+        self.browser.loadFinished.connect(self.add_page_to_history)
         
+        self.browser.load(QUrl(url_string))
+
+    def update_url_bar_on_main_window(self, qurl):
+        self.main_window.url_bar.setText(qurl.toString())
+
+    def update_tab_title(self):
+        index = self.parent_tabs.indexOf(self)
+        self.browser.page().runJavaScript("document.title", lambda title: self.parent_tabs.setTabText(index, title or "New Tab"))
+
+    def add_page_to_history(self):
+        title = self.browser.page().title()
+        url = self.browser.url().toString()
+        self.main_window.add_page_to_global_history(title, url)
+
+    def handle_fullscreen_request(self, request):
+        if request.toggleOn():
+            self.main_window.showFullScreen()
+        else:
+            self.main_window.showNormal()
+        request.accept()
+
+    def add_current_to_bookmarks(self):
+        bookmarks_data = load_data(BOOKMARKS_FILE, default_data=[])
+        title = self.browser.title()
+        current_url = self.browser.url().toString()
+        if not any(bm[1] == current_url for bm in bookmarks_data):
+            bookmarks_data.append([title, current_url])
+            save_data(bookmarks_data, BOOKMARKS_FILE)
+            self.main_window.refresh_bookmarks_menu()
+
+    def remove_bookmark(self, url_to_remove):
+        bookmarks_data = load_data(BOOKMARKS_FILE, default_data=[])
+        bookmarks_data = [bm for bm in bookmarks_data if bm[1] != url_to_remove]
+        save_data(bookmarks_data, BOOKMARKS_FILE)
+        self.main_window.refresh_bookmarks_menu()
+
+class MyMainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.resize(1200, 700)
+        
+        main_container = QWidget()
+        self.setCentralWidget(main_container)
+        main_layout = QVBoxLayout(main_container)
+
+        url_layout = QHBoxLayout()
+        self.url_bar = QLineEdit()
+        url_layout.addWidget(self.url_bar)
+        main_layout.addLayout(url_layout)
+        self.url_bar.returnPressed.connect(self.navigate)
+
+        content_and_sidebar_layout = QHBoxLayout ()
+        
+        self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self.close_tab)
+        self.tabs.currentChanged.connect(self.update_url_bar_on_tab_change)
+
+        plus_button = QToolButton()
+        plus_button.setText("+")
+        plus_button.clicked.connect(self.create_homepage)
+        self.tabs.setCornerWidget(plus_button)
+        
+        content_and_sidebar_layout.addWidget(self.tabs, 4)
+        
+        sidebar = QVBoxLayout()
+        
+        back_btn = QPushButton()
+        back_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Back_Icon.svg")))
+        back_btn.setIconSize(QSize(24, 24))
+        back_btn.clicked.connect(self.back_button_clicked)
+        sidebar.addWidget(back_btn)
+        
+        forward_btn = QPushButton()
+        forward_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Forward_Icon.svg")))
+        forward_btn.setIconSize(QSize(24, 24))
+        forward_btn.clicked.connect(self.forward_button_clicked)
+        sidebar.addWidget(forward_btn)
+        
+        refresh_btn = QPushButton()
+        refresh_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Refresh_Icon.svg")))
+        refresh_btn.setIconSize(QSize(24, 24))
+        refresh_btn.clicked.connect(self.refresh_button_clicked)
+        sidebar.addWidget(refresh_btn)
+
+        sidebar.addWidget(create_separator())
+        
+        self.bookmarks_menu = QMenu(self)
+        bookmarks_btn = QToolButton()
+        bookmarks_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Bookmarks_Icon.svg")))
+        bookmarks_btn.setIconSize(QSize(24, 24))
+        bookmarks_btn.setPopupMode(QToolButton.InstantPopup)
+        bookmarks_btn.setMenu(self.bookmarks_menu)
+        sidebar.addWidget(bookmarks_btn)
+        
+        downloads_btn = QToolButton()
+        downloads_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Downloads_Icon.svg")))
+        downloads_btn.setIconSize(QSize(24, 24))
+        downloads_btn.clicked.connect(self.show_downloads_dialog)
+        sidebar.addWidget(downloads_btn)
+
+        history_btn = QPushButton()
+        history_btn.setIcon(QIcon(os.path.join(ICON_PATH, "History_Icon.svg")))
+        history_btn.setIconSize(QSize(24, 24))
+        history_btn.clicked.connect(self.show_history_dialog) 
+        sidebar.addWidget(history_btn)
+
+        sidebar.addWidget(create_separator())
+
+        zoom_in_btn = QToolButton()
+        zoom_in_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Zoom_In_Icon.svg")))
+        zoom_in_btn.setIconSize(QSize(24, 24))
+        zoom_in_btn.clicked.connect(self.zoom_in)
+        sidebar.addWidget(zoom_in_btn)
+
+        zoom_out_btn = QToolButton()
+        zoom_out_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Zoom_Out_Icon.svg")))
+        zoom_out_btn.setIconSize(QSize(24, 24))
+        zoom_out_btn.clicked.connect(self.zoom_out)
+        sidebar.addWidget(zoom_out_btn)
+        
+        sidebar.addStretch()
+
+        content_and_sidebar_layout.addLayout(sidebar, 1)
+        main_layout.addLayout(content_and_sidebar_layout)
+        
+        self.history_data = load_data(HISTORY_FILE, default_data=[])
+        self.history_dialog = HistoryDialog(self)
+
+        self.downloads_data = load_data(DOWNLOADS_FILE, default_data=[])
+        self.downloads_dialog = DownloadsDialog(self)
+        
+        self.bookmarks_data = load_data(BOOKMARKS_FILE, default_data=[])
+        
+        self.refresh_bookmarks_menu()
+        self.create_homepage()
+
+    def navigate(self):
+        current_tab = self.tabs.currentWidget()
+        text = self.url_bar.text()
+
+        if isinstance(current_tab, BrowserTab):
+            if "." not in text:
+                text = "https://www.google.com/search?q=" + text
+            if not text.startswith("http"):
+                text = "https://" + text
+            current_tab.browser.load(QUrl(text))
+        elif isinstance(current_tab, HomePage):
+            self.open_new_tab(text)
+    
+    def back_button_clicked(self):
+        current_tab = self.tabs.currentWidget()
+        if isinstance(current_tab, BrowserTab):
+            current_tab.browser.back()
+
+    def forward_button_clicked(self):
+        current_tab = self.tabs.currentWidget()
+        if isinstance(current_tab, BrowserTab):
+            current_tab.browser.forward()
+
+    def refresh_button_clicked(self):
+        current_tab = self.tabs.currentWidget()
+        if isinstance(current_tab, BrowserTab):
+            current_tab.browser.reload()
+
+    def zoom_in(self):
+        current_tab = self.tabs.currentWidget()
+        if isinstance(current_tab, BrowserTab):
+            zoom = current_tab.browser.zoomFactor()
+            new_zoom = min(zoom + 0.25, 3.0)
+            current_tab.browser.setZoomFactor(new_zoom)
+
+    def zoom_out(self):
+        current_tab = self.tabs.currentWidget()
+        if isinstance(current_tab, BrowserTab):
+            zoom = current_tab.browser.zoomFactor()
+            new_zoom = max(zoom - 0.25, 0.25)
+            current_tab.browser.setZoomFactor(new_zoom)
+            
+    def update_url_bar_on_tab_change(self):
+        current_tab = self.tabs.currentWidget()
+        if isinstance(current_tab, BrowserTab):
+            self.url_bar.setText(current_tab.browser.url().toString())
+        else:
+            self.url_bar.clear()
+
+    def create_homepage(self):
+        homepage_widget = HomePage(self)
         self.tabs.addTab(homepage_widget, "Home")
         self.tabs.setCurrentWidget(homepage_widget)
 
+    def open_new_tab(self, url_string):
+        if "." not in url_string:
+            url_string = "https://www.google.com/search?q=" + url_string
+        if not url_string.startswith("http"):
+            url_string = "https://" + url_string
+            
+        browser_tab = BrowserTab(self.tabs, url_string, self) 
+        tab_index = self.tabs.addTab(browser_tab, "Loading...")
+        self.tabs.setCurrentIndex(tab_index)
+
     def close_tab(self, i):
+        if self.tabs.count() < 2:
+            return
         w = self.tabs.widget(i)
         self.tabs.removeTab(i)
         w.deleteLater()
-
-    def open_site(self, url):
-        tab_widget = BrowserTab(self.tabs, url, self) 
-        tab_index = self.tabs.addTab(tab_widget, "New Tab")
-        self.tabs.setCurrentIndex(tab_index)
-        tab_widget.browser.load(QUrl(url))
     
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_F11:
+            if self.isFullScreen():
+                self.showNormal()
+            else:
+                self.showFullScreen()
+    
+    def handle_fullscreen_request(self, request):
+        if request.toggleOn():
+            self.showFullScreen()
+        else:
+            self.showNormal()
+        request.accept()
+
     def add_page_to_global_history(self, title, url):
         if not self.history_data or (title, url) != self.history_data[-1]:
             self.history_data.append([title, url])
@@ -605,87 +619,82 @@ class MyMainWindow(QMainWindow):
         if path:
             download.setPath(path)
             download.accept()
-            
-            # --- Key change: Store the download object itself ---
             downloads_list[download.id()] = {
-                'id': download.id(),
-                'path': path,
-                'state': download.state(),
-                'q_object': download,
-                'received_bytes': 0,
-                'total_bytes': download.totalBytes(),
-                'received_mb': 0.0,
-                'total_mb': download.totalBytes() / (1024*1024),
-                'progress': 0.0,
+                'id': download.id(), 'path': path, 'state': download.state(), 'q_object': download,
+                'received_bytes': 0, 'total_bytes': download.totalBytes(),
+                'received_mb': 0.0, 'total_mb': download.totalBytes() / (1024*1024), 'progress': 0.0,
             }
-            # ---------------------------------------------------
-            
             download.downloadProgress.connect(lambda received, total: self.update_download_progress(download, received, total))
             download.stateChanged.connect(lambda state: self.handle_download_state_change(download, state))
-            
             self.downloads_dialog.refresh_downloads()
             self.downloads_dialog.show()
 
     def update_download_progress(self, download, received_bytes, total_bytes):
-        # --- Fix 3: Removed duplicated lines that were causing a logic error ---
         if download.id() in downloads_list:
-            if total_bytes > 0:
-                progress = received_bytes / total_bytes
-            else:
-                progress = 0
-            
             downloads_list[download.id()]['received_bytes'] = received_bytes
             downloads_list[download.id()]['total_bytes'] = total_bytes
             downloads_list[download.id()]['received_mb'] = received_bytes / (1024 * 1024)
             downloads_list[download.id()]['total_mb'] = total_bytes / (1024 * 1024)
-            downloads_list[download.id()]['progress'] = progress
-            
+            downloads_list[download.id()]['progress'] = received_bytes / total_bytes if total_bytes > 0 else 0
             self.downloads_dialog.refresh_downloads()
 
     def handle_download_state_change(self, download, state):
         if download.id() in downloads_list:
             downloads_list[download.id()]['state'] = state
-        
-            # When finished or cancelled, remove from active list and move to persistent list
             if state in [QWebEngineDownloadItem.DownloadCompleted, QWebEngineDownloadItem.DownloadCancelled]:
                 download_info = downloads_list.pop(download.id())
-                
-                # --- Fix 4: Removed the QWebEngineDownloadItem object before saving to JSON ---
                 if 'q_object' in download_info:
                     del download_info['q_object']
-                # ---------------------------------------------------------------------------------
-                
                 self.downloads_data.append(download_info)
                 save_data(self.downloads_data, DOWNLOADS_FILE)
-            
             self.downloads_dialog.refresh_downloads()
 
-    # --- Key change: Use the object directly, no lookup required ---
     def pause_resume_download(self, download_obj, checked):
-        if checked:
-            download_obj.pause()
-        else:
-            download_obj.resume()
+        if checked: download_obj.pause()
+        else: download_obj.resume()
 
-    def cancel_download(self, download_obj):
-        download_obj.cancel()
-    # --------------------------------------------------------------
+    def cancel_download(self, download_obj): download_obj.cancel()
     
     def show_in_folder(self, path):
-        if sys.platform == "win32":
-            QProcess.startDetached("explorer.exe", ["/select,", os.path.normpath(path)])
-        elif sys.platform == "darwin":
-            QProcess.startDetached("open", ["-R", path])
-        else: # Linux
-            QProcess.startDetached("xdg-open", [os.path.dirname(path)])
+        if sys.platform == "win32": QProcess.startDetached("explorer.exe", ["/select,", os.path.normpath(path)])
+        elif sys.platform == "darwin": QProcess.startDetached("open", ["-R", path])
+        else: QProcess.startDetached("xdg-open", [os.path.dirname(path)])
 
     def clear_all_downloads(self):
-        # This will not affect active downloads, just the persistent history
         self.downloads_data = []
         save_data(self.downloads_data, DOWNLOADS_FILE)
         self.downloads_dialog.refresh_downloads()
+    
+    def add_current_to_bookmarks(self):
+        current_tab = self.tabs.currentWidget()
+        if not isinstance(current_tab, BrowserTab): return
+        title = current_tab.browser.title()
+        current_url = current_tab.browser.url().toString()
+        if not any(bm[1] == current_url for bm in self.bookmarks_data):
+            self.bookmarks_data.append([title, current_url])
+            save_data(self.bookmarks_data, BOOKMARKS_FILE)
+            self.refresh_bookmarks_menu()
 
-# --- Application Startup ---
+    def remove_bookmark(self, url_to_remove):
+        self.bookmarks_data = [bm for bm in self.bookmarks_data if bm[1] != url_to_remove]
+        save_data(self.bookmarks_data, BOOKMARKS_FILE)
+        self.refresh_bookmarks_menu()
+
+    def refresh_bookmarks_menu(self):
+        self.bookmarks_menu.clear()
+        add_action = QAction("Add This Page to Bookmarks", self.bookmarks_menu)
+        add_action.triggered.connect(self.add_current_to_bookmarks)
+        self.bookmarks_menu.addAction(add_action)
+        self.bookmarks_menu.addSeparator()
+        for name, link in self.bookmarks_data:
+            action = QAction(name, self.bookmarks_menu)
+            action.triggered.connect(lambda ch, u=link: self.open_new_tab(u))
+            self.bookmarks_menu.addAction(action)
+            delete_action = QAction("Delete", action)
+            delete_action.triggered.connect(lambda ch, u=link: self.remove_bookmark(u))
+            action.setToolTip(f"Right-click to delete\n{link}")
+            action.setMenu(QMenu())
+            action.menu().addAction(delete_action)
 
 if __name__ == "__main__":
     window = MyMainWindow()
