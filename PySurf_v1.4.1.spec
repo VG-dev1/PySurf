@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['PySurf_v1.4.0.py'],
+    ['PySurf_v1.4.1.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='PySurf_v1.4.0',
+    name='PySurf_v1.4.1',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:\\Users\\vitoh\\PySurf_Dev\\PySurf_v1.2.0\\Icons\\PySurf_Icon.ico'],
+    icon=['C:\\Users\\vitoh\\PySurf_Dev\\PySurf_v1.4.1\\Icons\\PySurf_Icon.ico'],
 )

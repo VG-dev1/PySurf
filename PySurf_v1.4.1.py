@@ -17,7 +17,7 @@ BOOKMARKS_FILE = "bookmarks.json"
 HISTORY_FILE = "history.json"
 DOWNLOADS_FILE = "downloads.json"
 SETTINGS_FILE = "settings.json"
-ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Icons/")
+ICON_PATH = os.path.join(os.path.dirname(__file__), "Icons")
 
 incognito_windows = []
 
