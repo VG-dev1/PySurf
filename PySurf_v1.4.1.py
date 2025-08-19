@@ -17,7 +17,7 @@ BOOKMARKS_FILE = "bookmarks.json"
 HISTORY_FILE = "history.json"
 DOWNLOADS_FILE = "downloads.json"
 SETTINGS_FILE = "settings.json"
-ICON_PATH = "C:/Users/vitoh/PySurf_Dev/PySurf_v1.4.0/Icons/"
+ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Icons/")
 
 incognito_windows = []
 
@@ -41,7 +41,7 @@ def save_data(data, filename):
         json.dump(data, f, indent=4)
 
 app = QApplication(sys.argv)
-app.setWindowIcon(QIcon("C:/Users/vitoh/PySurf_Dev/PySurf_v1.4.0/PySurf_Icon.ico"))
+app.setWindowIcon(QIcon(os.path.join(ICON_PATH, "PySurf_Icon.ico")))
 app.setFont(QFont("Segoe UI"))
 qtmodern.styles.light(app)
 app.setStyleSheet("""
@@ -596,10 +596,14 @@ class IncognitoWindow(QMainWindow):
     def navigate(self):
         current_tab = self.tabs.currentWidget()
         text = self.url_bar.text()
-        if "." not in text:
+         # New, more reliable logic
+        if not text.startswith("http://") and not text.startswith("https://"):
+            if "." in text:
+                # Assume a domain, try HTTPS first
+                text = "https://" + text
+        else:
+            # Assume a search query
             text = self.current_search_engine['url'] + text
-        if not text.startswith("http"):
-            text = "https://" + text
         if isinstance(current_tab, BrowserTab):
             current_tab.browser.load(QUrl(text))
         elif isinstance(current_tab, HomePage):
