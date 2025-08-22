@@ -1,100 +1,54 @@
 # 🌊 PySurf – Your Minimalist Python Browser
 
-**PySurf** is a sleek, lightweight web browser built with **Python** and **PyQt5**, designed for speed, simplicity, and customization. Open multiple tabs, save bookmarks and shortcuts, and surf the web your way—all in one clean interface.
+**PySurf** is a sleek, lightweight web browser built with **Python** and **PyQt5**, designed for speed, simplicity, and customization.
+
+# Why PySurf?
+In the world of heavy, and bloated browsers, PySurf provides a cleaner interface, and less bloat, while still having the same functionality as other browsers.
 
 ---
 
 ## 🚀 Features
 
-- 🔖 **Tabbed Browsing** – Open and switch between multiple sites seamlessly  
-- 🏠 **Custom Homepage** – Google search + personal website shortcuts  
-- 📌 **Quick Shortcuts and boomarks** – Add, remove, and organize your favorite sites easily   
-- 🎨 **Clean, Minimal UI** – Modern design with Segoe UI font  
-- 🛠️ **Customizable Settings** – Save preferences and startup options  
+- 🔖 **Tabbed Browsing** – Open and switch between multiple sites seamlessly
+- 🏠 **Custom Homepage** – Web search + personal website shortcuts
+- 📌 **Quick Shortcuts and boomarks** – Add, remove, and organize your favorite sites easily
+- 🎨 **Clean, Minimal UI** – Modern design with Segoe UI font, icons, and a sidebar
+- 🛠️ **Customizable Settings** – Save preferences, like your prefered search engine, and prefered theme to JSON
 - 🌐 **Full Navigation Controls** – Back, forward, refresh for every tab
 - 🛠️ **Downloads support** - Download files from the internet, and manage them easily in one window
 - 🛠️ **Fullscreen support** - Full screen support on all websites, or by pressing F11 on your keyboard
+- 🌒 **Dark mode** - Browse in peace with less eye strain
 
 ---
 
 ## 🖥️ PySurf UI Overview
 
+<img width="1919" height="1031" alt="image" src="https://github.com/user-attachments/assets/65258a01-f708-4f72-89d7-386aebad0cb1" />
 
-
-### 🔵 Main Window
-
-- The main app window titled **"PySurf"**  
-- Contains a **"New Tab"** button and a **tabbed browsing area**  
-- Ready for quick browsing sessions
-
-### 🔘 "New Tab" Button
-
-- Opens a **fresh homepage tab**  
-- Always visible for starting new sessions
-
-### 🗂️ Tab Area (`QTabWidget`)
-
-- Each tab shows either the **homepage** or a **web page**  
-- Tabs include a **✕ button** to close them  
+- A simple **Homepage**, with "PySurf" text, shortcuts, and a search bar
+- A wide **URL bar**
+- **Tabs**
+- A **sidebar** with icons for different actions
 
 ---
 
-### 🏠 Homepage Tab
+## Installation guide (regular users)
+1. Click on the latest release in the Releases section of my GitHub repository.
+2. Scroll down, and download the .exe file.
+3. Locate the downloaded .exe on your computer.
+4. Double click on the .exe to run it.
+> Optional: Drag the .exe to your taskbar, to pin it to your taskbar for easy access.
 
-The heart of PySurf when opening a new tab:
-<img width="1919" height="1032" alt="Snimka zaslona 2025-08-13 132010" src="https://github.com/user-attachments/assets/c3a13c4b-9dc1-45f6-b302-792bbfeedb3b" />
+## Installation guide (developers/contributors)
+1. Click on the latest release in the Releases section of my GitHub repository.
+2. Scroll down, and download the source code .zip file.
+3. Open your terminal.
+4. Install the required libraries from https://github.com/VG-dev1/PySurf/blob/main/REQUIREMENTS.md.
+5. Locate the downloaded .zip on your computer.
+6. Extract it.
+7. Double click to open the extracted folder.
+8. Open a code editor (VS Code recomended).
+9. Go to File, Open, and open the .py file.
+10. Run the opened .py file.
 
-#### 🧭 Title Label
-
-- Shows **"PySurf Search"** prominently  
-- Establishes the browser’s identity  
-
-#### 🔎 Search Bar
-
-- Type your query into **"Search for anything..."**  
-- Press **Enter** or the **Search button**  
-
-#### 🔘 Search Button
-
-- Opens Google search results in a **new tab**  
-
----
-
-### 🔗 Shortcut Row
-
-Quick-access buttons for your favorite sites:
-
-#### ➕ Add Shortcut
-
-- Opens a dialog to add:  
-  - **Name** (e.g., Reddit)  
-  - **URL** (must start with `https://`)  
-  - Confirm with **OK**  
-
-#### 🖱️ Delete Shortcut
-
-- Right-click a shortcut button to remove it instantly  
-
----
-
-### 🌐 Web Page Tab
-
-Full browser experience when visiting a site:
-
-#### ◀️▶️🔄 Navigation
-
-- **Back**: Go to the previous page  
-- **Forward**: Move ahead in history  
-- **Refresh**: Reload the current page  
-
-#### 🧭 Address Handling
-
-- Tab titles update automatically with the page’s URL  
-
----
-
-## ✨ Why PySurf?
-
-- Lightweight browsing without unnecessary bloat  
-- Easy to customize and navigate quickly  
-- Built with **Python**, ideal for learners and developers  
+Thank you for trying out PySurf!
