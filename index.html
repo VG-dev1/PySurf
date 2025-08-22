@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PySurf</title>
+    <link rel="icon" href="https://raw.githubusercontent.com/vg-dev1/PySurf/main/Icons/icon.svg" type="image/svg+xml">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+      :root {
+        --font-stack: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      }
+      body {
+        font-family: var(--font-stack);
+      }
+      /* Ensure the animations don't trigger until they are in view */
+      [data-animate] { opacity: 0; }
+      [data-animate].animated { opacity: 1; }
+    </style>
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['var(--font-stack)'],
+            },
+            keyframes: {
+              'fade-in-down': {
+                '0%': { opacity: '0', transform: 'translateY(-20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              'fade-in-up': {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              'blob': {
+                '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+                '30%': { transform: 'translate(20px, -30px) scale(1.1)' },
+                '60%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                '80%': { transform: 'translate(0, -10px) scale(1.05)' },
+              },
+            },
+            animation: {
+              'fade-in-down': 'fade-in-down 0.6s ease-out forwards',
+              'fade-in-up': 'fade-in-up 0.6s ease-out forwards',
+              'blob': 'blob 10s ease-in-out infinite',
+            },
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-900 transition-colors duration-500" id="body-main">
+
+    <header class="py-4 shadow-sm bg-white border-b border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-colors duration-500">
+        <nav class="container mx-auto flex justify-between items-center px-4">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-globe h-8 w-8 text-blue-600"></i>
+                <span class="text-2xl font-extrabold tracking-tight text-blue-600">PySurf</span>
+            </div>
+            <div class="flex items-center space-x-4">
+
+                </button>
+                <a href="#download" class="text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 transition-colors duration-300">Download</a>
+                <a href="https://github.com/vg-dev1/PySurf" target="_blank" rel="noopener noreferrer" class="text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 transition-colors duration-300 flex items-center space-x-1">
+                    <i class="fa-brands fa-github h-5 w-5"></i>
+                    <span>GitHub</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <section class="py-20 text-center relative overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors duration-500">
+        <div class="container mx-auto px-4 relative z-10">
+            <h1 class="text-5xl md:text-6xl font-extrabold leading-tight mb-6 animate-fade-in-down text-gray-900 dark:text-gray-50">
+                PySurf: Your Web, Uncluttered.
+            </h1>
+            <p class="text-xl md:text-2xl mb-10 max-w-2xl mx-auto opacity-0 animate-fade-in-up text-gray-700 dark:text-gray-300" style="animation-delay: 0.2s;">
+                Experience a lightweight, private, and customizable web browser built with Python.
+            </p>
+            <div class="flex justify-center space-x-4 opacity-0 animate-fade-in-up" style="animation-delay: 0.4s;">
+                <a href="https://github.com/vg-dev1/PySurf/releases/latest" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1">
+                    <i class="fa-solid fa-download inline-block mr-2 h-5 w-5"></i>
+                    Download PySurf v1.5.0
+                </a>
+                <a href="https://github.com/vg-dev1/PySurf" target="_blank" rel="noopener noreferrer" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:-translate-y-1 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200">
+                    <i class="fa-brands fa-github inline-block mr-2 h-5 w-5"></i>
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+        <div class="absolute inset-0 z-0 opacity-10">
+          <div class="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
+          <div class="absolute top-1/2 right-1/4 w-48 h-48 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+          <div class="absolute bottom-1/4 left-1/2 w-40 h-40 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
+        </div>
+    </section>
+
+    <section class="py-16 bg-blue-50 dark:bg-gray-800 transition-colors duration-500">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-extrabold text-center mb-12 text-gray-900 dark:text-gray-50">Why PySurf?</h2>
+            <div class="grid md:grid-cols-3 gap-10 text-gray-900 dark:text-gray-50">
+                <div class="p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-700">
+                    <i class="fa-regular fa-file-code h-10 w-10 text-blue-600 mb-4"></i>
+                    <h3 class="text-2xl font-bold mb-3">Lightweight Performance</h3>
+                    <p class="text-gray-600 dark:text-gray-300">
+                        Designed to be lean on system resources. Get to your content faster without the bloat.
+                    </p>
+                </div>
+                <div class="p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-700">
+                    <i class="fa-solid fa-globe h-10 w-10 text-blue-600 mb-4"></i>
+                    <h3 class="text-2xl font-bold mb-3">Clean & Intuitive Interface</h3>
+                    <p class="text-gray-600 dark:text-gray-300">
+                        Focus on your content with an uncluttered design and easy navigation.
+                    </p>
+                </div>
+                <div class="p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-700">
+                    <i class="fa-solid fa-user-shield h-10 w-10 text-blue-600 mb-4"></i>
+                    <h3 class="text-2xl font-bold mb-3">Privacy-Conscious</h3>
+                    <p class="text-gray-600 dark:text-gray-300">
+                        Browse with confidence, knowing your privacy is respected with features like Incognito Mode.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-16 text-gray-900 dark:text-gray-50 transition-colors duration-500">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-extrabold text-center mb-12">Key Features</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="p-6 rounded-lg shadow-md flex items-start space-x-4 bg-white dark:bg-gray-700">
+                    <i class="fa-solid fa-folder-open h-7 w-7 text-blue-600 mt-1"></i>
+                    <div>
+                        <h3 class="text-xl font-bold mb-1">Tabbed Browsing</h3>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm">Navigate multiple websites seamlessly.</p>
+                    </div>
+                </div>
+                <div class="p-6 rounded-lg shadow-md flex items-start space-x-4 bg-white dark:bg-gray-700">
+                    <i class="fa-solid fa-bookmark h-7 w-7 text-blue-600 mt-1"></i>
+                    <div>
+                        <h3 class="text-xl font-bold mb-1">Bookmarks Management</h3>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm">Save and organize your favorite sites.</p>
+                    </div>
+                </div>
+                <div class="p-6 rounded-lg shadow-md flex items-start space-x-4 bg-white dark:bg-gray-700">
+                    <i class="fa-solid fa-history h-7 w-7 text-blue-600 mt-1"></i>
+                    <div>
+                        <h3 class="text-xl font-bold mb-1">Browsing History</h3>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm">Easily revisit previously visited pages.</p>
+                    </div>
+                </div>
+                <div class="p-6 rounded-lg shadow-md flex items-start space-x-4 bg-white dark:bg-gray-700">
+                    <i class="fa-solid fa-download h-7 w-7 text-blue-600 mt-1"></i>
+                    <div>
+                        <h3 class="text-xl font-bold mb-1">Download Manager</h3>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm">Monitor and control your file downloads.</p>
+                    </div>
+                </div>
+                <div class="p-6 rounded-lg shadow-md flex items-start space-x-4 bg-white dark:bg-gray-700">
+                    <i class="fa-solid fa-palette h-7 w-7 text-blue-600 mt-1"></i>
+                    <div>
+                        <h3 class="text-xl font-bold mb-1">Light & Dark Themes</h3>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm">Switch your browser's appearance for comfort.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="download" class="py-20 text-center text-gray-900 dark:text-gray-50 transition-colors duration-500">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-extrabold mb-8">Get PySurf Now!</h2>
+            <p class="text-xl mb-10 max-w-2xl mx-auto text-gray-700 dark:text-gray-300">
+                Ready to experience a faster, simpler, and more private web? Download PySurf today.
+            </p>
+            <a href="https://github.com/vg-dev1/PySurf/releases/latest" target="_blank" rel="noopener noreferrer" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1">
+                <i class="fa-solid fa-download inline-block mr-2 h-6 w-6"></i>
+                Download PySurf v1.5.0 (.exe)
+            </a>
+            <p class="mt-6 text-gray-600 dark:text-gray-400">
+                Available for Windows. Check GitHub for source code.
+            </p>
+        </div>
+    </section>
+
+    <footer class="py-8 text-center text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 transition-colors duration-500 bg-white dark:bg-gray-800">
+        <p>&copy; 2024 PySurf. All rights reserved.</p>
+        <p class="mt-2">
+            <a href="https://github.com/vg-dev1/PySurf" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 dark:hover:text-blue-500 transition-colors duration-300">
+                GitHub
+            </a>
+            <span class="mx-2">|</span>
+            <a href="#" class="hover:text-blue-600 dark:hover:text-blue-500 transition-colors duration-300">
+                Privacy Policy
+            </a>
+        </p>
+    </footer>
+
+    <script>
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const body = document.getElementById('body-main');
+        const sunIcon = document.getElementById('sun-icon');
+        const moonIcon = document.getElementById('moon-icon');
+
+        // Check for saved theme preference or system preference
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            body.classList.add('dark');
+            sunIcon.classList.remove('hidden');
+            moonIcon.classList.add('hidden');
+        }
+
+        // Toggle theme on button click
+        themeToggleBtn.addEventListener('click', () => {
+            body.classList.toggle('dark');
+            const isDarkMode = body.classList.contains('dark');
+            
+            // Save preference to localStorage
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+
+            // Toggle icons
+            sunIcon.classList.toggle('hidden', !isDarkMode);
+            moonIcon.classList.toggle('hidden', isDarkMode);
+        });
+    </script>
+</body>
+</html>
