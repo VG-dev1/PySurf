@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['PySurf_v1.4.1.py'],
+    ['PySurf_v1.5.0.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('Icons', 'Icons')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='PySurf_v1.4.1',
+    name='PySurf_v1.5.0',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

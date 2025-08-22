@@ -19,6 +19,7 @@ DOWNLOADS_FILE = "downloads.json"
 SETTINGS_FILE = "settings.json"
 ICON_PATH = os.path.join(os.path.dirname(__file__), "Icons")
 
+
 incognito_windows = []
 
 def create_separator():
@@ -27,7 +28,9 @@ def create_separator():
     separator.setFrameShadow(QFrame.Sunken)
     return separator
 
-def load_data(filename, default_data=[]):
+def load_data(filename, default_data=None):
+    if default_data is None:
+        default_data = [] if "json" in filename else {}
     if os.path.exists(filename):
         try:
             with open(filename, "r", encoding="utf-8") as f:
@@ -43,26 +46,55 @@ def save_data(data, filename):
 app = QApplication(sys.argv)
 app.setWindowIcon(QIcon(os.path.join(ICON_PATH, "PySurf_Icon.ico")))
 app.setFont(QFont("Segoe UI"))
-qtmodern.styles.light(app)
-app.setStyleSheet("""
-QPushButton {background-color: #ffffff;color: black;border: none;padding: 8px 16px;border-radius: 6px;}
-QPushButton:hover {border: 1px solid #aeb6bf;}
-QLineEdit {border: 1px solid #ccc;border-radius: 4-px;padding: 6px;}
-QTabWidget::pane {border: 1px solid #ccc;border-radius: 4px;}
-QTabBar::tab {background: #ecf0f1;padding: 8px 16px;margin: 2px;border-top-left-radius: 6px;border-top-right-radius: 66px;}
-QTabBar::tab:selected {background: #aeb6bf;font-weight: bold;}
-QLabel {color: #2c3e50;}
-QDialog {background-color: #f8f9fa;}
-QToolButton {background-color: #ffffff;color: black;border: none;padding: 8px 16px;border-radius: 6px;}
-QFrame.HistoryItem {border: 1px solid #ccc; border-radius: 5px; margin: 5px; background-color: #f0f0f0;}
-QPushButton.DeleteButton {background-color: #dc3545; color: white; border-radius: 4px; padding: 4px 8px; font-weight: bold; border: none;}
-QPushButton.DeleteButton:hover {background-color: #c82333;}
-QFrame.DownloadItem {border: 1px solid #aaa; border-radius: 5px; margin: 5px; background-color: #fafafa;}
-QProgressBar {border: 1px solid grey; border-radius: 5px; text-align: center;}
-QProgressBar::chunk {background-color: #5d9cec;}
-""")
 
-
+# Apply initial stylesheet based on default theme or loaded settings
+def apply_stylesheet(theme):
+    if theme == "light":
+        qtmodern.styles.light(app)
+        app.setStyleSheet("""
+            QPushButton {background-color: #ffffff; color: black; border: none; padding: 8px 16px; border-radius: 6px;}
+            QPushButton:hover {border: 1px solid #aeb6bf;}
+            QLineEdit {border: 1px solid #ccc; border-radius: 4px; padding: 6px; background-color: #ffffff; color: black;}
+            QTabWidget::pane {border: 1px solid #ccc; border-radius: 4px; background-color: #f0f0f0;}
+            QTabBar::tab {background: #ecf0f1; padding: 8px 16px; margin: 2px; border-top-left-radius: 6px; border-top-right-radius: 6px;}
+            QTabBar::tab:selected {background: #aeb6bf; font-weight: bold;}
+            QLabel {color: #2c3e50;}
+            QDialog {background-color: #f8f9fa;}
+            QToolButton {background-color: #ffffff; color: black; border: none; padding: 8px 16px; border-radius: 6px;}
+            QFrame#HistoryItem, QFrame#DownloadItem {border: 1px solid #ccc; border-radius: 5px; margin: 5px; background-color: #f0f0f0;}
+            QPushButton.DeleteButton {background-color: #dc3545; color: white; border-radius: 4px; padding: 4px 8px; font-weight: bold; border: none;}
+            QPushButton.DeleteButton:hover {background-color: #c82333;}
+            QProgressBar {border: 1px solid grey; border-radius: 5px; text-align: center; color: black;}
+            QProgressBar::chunk {background-color: #5d9cec;}
+            /* Ensure text visibility on buttons */
+            QPushButton, QToolButton { color: black; }
+            QMenu { background-color: #ffffff; border: 1px solid #ccc; }
+            QMenu::item { padding: 5px 15px; color: black;}
+            QMenu::item:selected { background-color: #aeb6bf; }
+        """)
+    else:
+        qtmodern.styles.dark(app)
+        app.setStyleSheet("""
+            QPushButton {background-color: #444444; color: #eeeeee; border: none; padding: 8px 16px; border-radius: 6px;}
+            QPushButton:hover {border: 1px solid #777777;}
+            QLineEdit {border: 1px solid #555555; border-radius: 4px; padding: 6px; background-color: #333333; color: #eeeeee;}
+            QTabWidget::pane {border: 1px solid #555555; border-radius: 4px; background-color: #222222;}
+            QTabBar::tab {background: #333333; padding: 8px 16px; margin: 2px; border-top-left-radius: 6px; border-top-right-radius: 6px; color: #eeeeee;}
+            QTabBar::tab:selected {background: #555555; font-weight: bold; color: #ffffff;}
+            QLabel {color: #eeeeee;}
+            QDialog {background-color: #333333;}
+            QToolButton {background-color: #444444; color: #eeeeee; border: none; padding: 8px 16px; border-radius: 6px;}
+            QFrame#HistoryItem, QFrame#DownloadItem {border: 1px solid #555555; border-radius: 5px; margin: 5px; background-color: #444444;}
+            QPushButton.DeleteButton {background-color: #882222; color: white; border-radius: 4px; padding: 4px 8px; font-weight: bold; border: none;}
+            QPushButton.DeleteButton:hover {background-color: #aa3333;}
+            QProgressBar {border: 1px solid #666666; border-radius: 5px; text-align: center; color: #eeeeee;}
+            QProgressBar::chunk {background-color: #5d9cec;}
+            /* Ensure text visibility on buttons */
+            QPushButton, QToolButton { color: #eeeeee; }
+            QMenu { background-color: #333333; border: 1px solid #555555; }
+            QMenu::item { padding: 5px 15px; color: #eeeeee; }
+            QMenu::item:selected { background-color: #555555; }
+        """)
 
 downloads_list = {}
 
@@ -390,6 +422,9 @@ class PySurfWebPage(QWebEnginePage):
         self.main_window.handle_ssl_errors(current_tab, [certificateError])
         return True
 
+    def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        pass
+
 class BrowserTab(QWidget):
     def __init__(self, parent, url_string, main_window, profile, is_incognito=False):
         super().__init__(parent)
@@ -401,8 +436,7 @@ class BrowserTab(QWidget):
         self.parent_tabs = parent
         self.main_window = main_window
         self.is_incognito = is_incognito
-        self.security_status = {} # This will store the tab's security status
-
+        self.security_status = {}
         self.find_dialog = FindDialog(self.browser)
         self.find_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
         self.find_shortcut.activated.connect(self.find_dialog.show)
@@ -450,7 +484,8 @@ class BrowserTab(QWidget):
         bookmarks_data = [bm for bm in bookmarks_data if bm[1] != url_to_remove]
         save_data(bookmarks_data, BOOKMARKS_FILE)
         self.main_window.refresh_bookmarks_menu()
-        
+
+
 class IncognitoWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -526,9 +561,11 @@ class IncognitoWindow(QMainWindow):
             "Bing": {"url": "https://www.bing.com/search?q=", "str": "B"},
             "DuckDuckGo": {"url": "https://duckduckgo.com/?q=", "str": "D"}
         }
-        self.settings = {"search_engine": "Google"} 
+
+        self.settings = load_data(SETTINGS_FILE, default_data={"search_engine": "Google", "theme": "light"})
         self.current_search_engine = self.search_engines.get(self.settings.get("search_engine", "Google"), self.search_engines["Google"])
-        
+        self.current_theme = self.settings.get("theme", "light")
+
         self.search_engine_button = QToolButton()
         self.search_engine_button.setIconSize(QSize(24, 24))
         self.search_engine_button.setToolButtonStyle(Qt.ToolButtonTextOnly)
@@ -538,7 +575,13 @@ class IncognitoWindow(QMainWindow):
         sidebar.addWidget(self.search_engine_button)
         self.update_search_engine_menu()
         self.update_search_engine_button_icon()
-        
+
+        self.theme_button = QToolButton()
+        self.theme_button.setIconSize(QSize(24, 24))
+        self.theme_button.clicked.connect(self.toggle_theme)
+        sidebar.addWidget(self.theme_button)
+        self.update_theme_button_icon()
+
         self.bookmarks_menu = QMenu(self)
         bookmarks_btn = QToolButton()
         bookmarks_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Bookmarks_Icon.svg")))
@@ -596,14 +639,12 @@ class IncognitoWindow(QMainWindow):
     def navigate(self):
         current_tab = self.tabs.currentWidget()
         text = self.url_bar.text()
-         # New, more reliable logic
         if not text.startswith("http://") and not text.startswith("https://"):
             if "." in text:
-                # Assume a domain, try HTTPS first
                 text = "https://" + text
-        else:
-            # Assume a search query
-            text = self.current_search_engine['url'] + text
+            else:
+                text = self.current_search_engine['url'] + text
+        
         if isinstance(current_tab, BrowserTab):
             current_tab.browser.load(QUrl(text))
         elif isinstance(current_tab, HomePage):
@@ -619,7 +660,9 @@ class IncognitoWindow(QMainWindow):
             url_string = self.current_search_engine['url'] + url_string
         if not url_string.startswith("http"):
             url_string = "https://" + url_string
-        browser_tab = BrowserTab(self.tabs, url_string, self, self.profile, is_incognito=True) 
+        
+        browser_tab = BrowserTab(self.tabs, url_string, self, self.profile, is_incognito=True)
+        
         tab_index = self.tabs.addTab(browser_tab, "Loading...")
         self.tabs.setCurrentIndex(tab_index)
     
@@ -670,7 +713,6 @@ class IncognitoWindow(QMainWindow):
             self.update_security_icon(None)
             
     def add_page_to_global_history(self, title, url):
-        # Incognito window doesn't save history
         pass
 
     def show_history_dialog(self):
@@ -713,7 +755,6 @@ class IncognitoWindow(QMainWindow):
                 download_info = downloads_list.pop(download.id())
                 if 'q_object' in download_info:
                     del download_info['q_object']
-                # Incognito doesn't save downloads to a file
             self.downloads_dialog.refresh_downloads()
 
     def pause_resume_download(self, download_obj, checked):
@@ -728,7 +769,6 @@ class IncognitoWindow(QMainWindow):
         else: QProcess.startDetached("xdg-open", [os.path.dirname(path)])
 
     def clear_all_downloads(self):
-        # Incognito doesn't save downloads to a file, just clears the list
         self.downloads_data = []
         self.downloads_dialog.refresh_downloads()
     
@@ -765,6 +805,8 @@ class IncognitoWindow(QMainWindow):
 
     def set_search_engine(self, engine_name):
         self.current_search_engine = self.search_engines[engine_name]
+        self.settings['search_engine'] = engine_name
+        save_data(self.settings, SETTINGS_FILE)
         self.update_search_engine_button_icon()
         
     def update_search_engine_menu(self):
@@ -778,10 +820,30 @@ class IncognitoWindow(QMainWindow):
         self.search_engine_button.setToolButtonStyle(Qt.ToolButtonTextOnly)
         self.search_engine_button.setText(self.current_search_engine['str'])
         self.search_engine_button.setIcon(QIcon())
+
+    def toggle_theme(self):
+        if self.current_theme == "light":
+            self.current_theme = "dark"
+        else:
+            self.current_theme = "light"
+        
+        self.settings["theme"] = self.current_theme
+        save_data(self.settings, SETTINGS_FILE)
+        apply_stylesheet(self.current_theme)
+        self.update_theme_button_icon()
+
+    def update_theme_button_icon(self):
+        if self.current_theme == "light":
+            self.theme_button.setIcon(QIcon(os.path.join(ICON_PATH, "Light_Mode_Icon.svg")))
+            self.theme_button.setToolTip("Switch to Dark Mode")
+        else:
+            self.theme_button.setIcon(QIcon(os.path.join(ICON_PATH, "Dark_Mode_Icon.svg")))
+            self.theme_button.setToolTip("Switch to Light Mode")
+        self.theme_button.setText("")
+    
     
     def check_security(self, tab, qurl):
         url_str = qurl.toString()
-        print(f"DEBUG: Checking security for URL: {url_str}")
         if url_str.startswith("https://"):
             tab.security_status = {"status": "Secure", "description": "Connection is secure.", "icon_path": os.path.join(ICON_PATH, "Safe_Icon.svg"), "icon_color": "#28a745"}
         elif url_str.startswith("http://"):
@@ -789,11 +851,10 @@ class IncognitoWindow(QMainWindow):
         else:
              tab.security_status = {"status": "Local Page", "description": "This is a local browser page.", "icon_path": os.path.join(ICON_PATH, "Local_Icon.svg"), "icon_color": "#6c757d"}
         
-        print(f"DEBUG: Tab at index {self.tabs.indexOf(tab)} status set to: {tab.security_status['status']}")
+        print(f"DEBUG: Tab at index {self.tabs.indexOf(tab)} status set to: {tab.security_status.get('status', 'Unknown')}")
         self.update_security_icon(tab)
 
     def handle_ssl_errors(self, tab, ssl_errors):
-        print("DEBUG: SSL Error detected.")
         error_descriptions = []
         for error in ssl_errors:
             error_descriptions.append(error.errorDescription())
@@ -808,19 +869,15 @@ class IncognitoWindow(QMainWindow):
         self.update_security_icon(tab)
 
     def update_security_icon(self, tab):
-        print(f"DEBUG: Attempting to update icon for tab at index {self.tabs.indexOf(tab)}")
         if isinstance(tab, BrowserTab):
             icon_path = tab.security_status.get("icon_path")
             if icon_path and os.path.exists(icon_path):
                 self.security_icon_button.setIcon(QIcon(icon_path))
-                print(f"DEBUG: Icon set to {icon_path}")
             else:
                 self.security_icon_button.setIcon(QIcon())
                 print(f"DEBUG: Icon not found or path invalid.")
         else:
-            # For home page or other non-web pages
             self.security_icon_button.setIcon(QIcon(os.path.join(ICON_PATH, "Local_Icon.svg")))
-            print("DEBUG: Icon set to Local_Icon.svg")
             
     def show_security_report(self):
         current_tab = self.tabs.currentWidget()
@@ -860,8 +917,8 @@ class MyMainWindow(QMainWindow):
         self.history_data = load_data(HISTORY_FILE, default_data=[])
         self.downloads_data = load_data(DOWNLOADS_FILE, default_data=[])
         self.bookmarks_data = load_data(BOOKMARKS_FILE, default_data=[])
-        self.settings = load_data(SETTINGS_FILE, default_data={"search_engine": "Google"}) 
-        self.tab_security_status = {} # To store the status of each tab
+        self.settings = load_data(SETTINGS_FILE, default_data={"search_engine": "Google", "theme": "light"})
+        self.tab_security_status = {}
         self.ssl_errors_list = []
         self.blocked_requests = []
         
@@ -919,8 +976,10 @@ class MyMainWindow(QMainWindow):
             "Bing": {"url": "https://www.bing.com/search?q=", "str": "B"},
             "DuckDuckGo": {"url": "https://duckduckgo.com/?q=", "str": "D"}
         }
+
         self.current_search_engine = self.search_engines.get(self.settings.get("search_engine", "Google"), self.search_engines["Google"])
-        
+        self.current_theme = self.settings.get("theme", "light")
+
         self.search_engine_button = QToolButton()
         self.search_engine_button.setIconSize(QSize(24, 24))
         self.search_engine_button.setToolButtonStyle(Qt.ToolButtonTextOnly)
@@ -930,7 +989,13 @@ class MyMainWindow(QMainWindow):
         sidebar.addWidget(self.search_engine_button)
         self.update_search_engine_menu()
         self.update_search_engine_button_icon()
-        
+
+        self.theme_button = QToolButton()
+        self.theme_button.setIconSize(QSize(24, 24))
+        self.theme_button.clicked.connect(self.toggle_theme)
+        sidebar.addWidget(self.theme_button)
+        self.update_theme_button_icon()
+
         self.bookmarks_menu = QMenu(self)
         bookmarks_btn = QToolButton()
         bookmarks_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Bookmarks_Icon.svg")))
@@ -985,7 +1050,9 @@ class MyMainWindow(QMainWindow):
         
         self.profile = QWebEngineProfile.defaultProfile()
         self.profile.downloadRequested.connect(self.handle_download_requested)
-    
+
+        apply_stylesheet(self.current_theme)
+
     def _handle_url_change(self, tab, qurl):
         print(f"DEBUG: URL changed for tab at index {self.tabs.indexOf(tab)}. URL: {qurl.toString()}")
         self.check_security(tab, qurl)
@@ -1006,10 +1073,12 @@ class MyMainWindow(QMainWindow):
     def navigate(self):
         current_tab = self.tabs.currentWidget()
         text = self.url_bar.text()
-        if "." not in text:
-            text = self.current_search_engine['url'] + text
-        if not text.startswith("http"):
-            text = "https://" + text
+        if not text.startswith("http://") and not text.startswith("https://"):
+            if "." in text:
+                text = "https://" + text
+            else:
+                text = self.current_search_engine['url'] + text
+        
         if isinstance(current_tab, BrowserTab):
             current_tab.browser.load(QUrl(text))
         elif isinstance(current_tab, HomePage):
@@ -1025,7 +1094,9 @@ class MyMainWindow(QMainWindow):
             url_string = self.current_search_engine['url'] + url_string
         if not url_string.startswith("http"):
             url_string = "https://" + url_string
-        browser_tab = BrowserTab(self.tabs, url_string, self, QWebEngineProfile.defaultProfile()) 
+        
+        browser_tab = BrowserTab(self.tabs, url_string, self, QWebEngineProfile.defaultProfile())
+        
         tab_index = self.tabs.addTab(browser_tab, "Loading...")
         self.tabs.setCurrentIndex(tab_index)
     
@@ -1193,17 +1264,37 @@ class MyMainWindow(QMainWindow):
         self.search_engine_button.setToolButtonStyle(Qt.ToolButtonTextOnly)
         self.search_engine_button.setText(self.current_search_engine['str'])
         self.search_engine_button.setIcon(QIcon())
+
+    def toggle_theme(self):
+        if self.current_theme == "light":
+            self.current_theme = "dark"
+        else:
+            self.current_theme = "light"
+        
+        self.settings["theme"] = self.current_theme
+        save_data(self.settings, SETTINGS_FILE)
+        apply_stylesheet(self.current_theme)
+        self.update_theme_button_icon()
+
+    def update_theme_button_icon(self):
+        if self.current_theme == "light":
+            self.theme_button.setIcon(QIcon(os.path.join(ICON_PATH, "Light_Mode_Icon.svg")))
+            self.theme_button.setToolTip("Switch to Dark Mode")
+        else:
+            self.theme_button.setIcon(QIcon(os.path.join(ICON_PATH, "Dark_Mode_Icon.svg")))
+            self.theme_button.setToolTip("Switch to Light Mode")
+        self.theme_button.setText("")
+    
     
     def check_security(self, tab, qurl):
-        print(f"DEBUG: Checking security for URL: {qurl.toString()}")
-        if qurl.toString().startswith("https://"):
+        url_str = qurl.toString()
+        if url_str.startswith("https://"):
             tab.security_status = {"status": "Secure", "description": "Connection is secure.", "icon_path": os.path.join(ICON_PATH, "Safe_Icon.svg"), "icon_color": "#28a745"}
-        elif qurl.toString().startswith("http://"):
+        elif url_str.startswith("http://"):
             tab.security_status = {"status": "Not Secure", "description": "Connection is not secure.", "icon_path": os.path.join(ICON_PATH, "Unsafe_Icon.svg"), "icon_color": "#dc3545"}
         else:
              tab.security_status = {"status": "Local Page", "description": "This is a local browser page.", "icon_path": os.path.join(ICON_PATH, "Local_Icon.svg"), "icon_color": "#6c757d"}
         
-        print(f"DEBUG: Tab at index {self.tabs.indexOf(tab)} status set to: {tab.security_status.get('status', 'Unknown')}")
         self.update_security_icon(tab)
 
     def handle_ssl_errors(self, tab, ssl_errors):
@@ -1227,14 +1318,10 @@ class MyMainWindow(QMainWindow):
             icon_path = tab.security_status.get("icon_path")
             if icon_path and os.path.exists(icon_path):
                 self.security_icon_button.setIcon(QIcon(icon_path))
-                print(f"DEBUG: Icon set to {icon_path}")
             else:
                 self.security_icon_button.setIcon(QIcon())
-                print(f"DEBUG: Icon not found or path invalid.")
         else:
-            # For home page or other non-web pages
             self.security_icon_button.setIcon(QIcon(os.path.join(ICON_PATH, "Local_Icon.svg")))
-            print("DEBUG: Icon set to Local_Icon.svg")
             
     def show_security_report(self):
         current_tab = self.tabs.currentWidget()
@@ -1265,7 +1352,10 @@ class MyMainWindow(QMainWindow):
         request.accept()
 
 if __name__ == "__main__":
-    required_icons = ["Safe_Icon.svg", "Unsafe_Icon.svg", "Incognito_Icon.svg", "Plus_Icon.svg", "Back_Icon.svg", "Forward_Icon.svg", "Refresh_Icon.svg", "Bookmarks_Icon.svg", "Downloads_Icon.svg", "History_Icon.svg", "Zoom_In_Icon.svg", "Zoom_Out_Icon.svg"]
+    required_icons = ["Safe_Icon.svg", "Unsafe_Icon.svg", "Incognito_Icon.svg", "Plus_Icon.svg",
+                      "Back_Icon.svg", "Forward_Icon.svg", "Refresh_Icon.svg", "Bookmarks_Icon.svg",
+                      "Downloads_Icon.svg", "History_Icon.svg", "Zoom_In_Icon.svg", "Zoom_Out_Icon.svg",
+                      "Light_Mode_Icon.svg", "Dark_Mode_Icon.svg"]
     for icon_name in required_icons:
         if not os.path.exists(os.path.join(ICON_PATH, icon_name)):
             print(f"Warning: Missing icon file: {icon_name} at {ICON_PATH}. Please ensure all icons are in place.")
