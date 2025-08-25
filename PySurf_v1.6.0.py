@@ -10,7 +10,8 @@ import qtmodern.windows, qtmodern.styles
 import uuid
 
 # --- CONSTANTS ---
-os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-gpu --ignore-gpu-blocklist --enable-smooth-scrolling"
+DEV_TOOLS_PORT = 9000
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = f"--enable-gpu --ignore-gpu-blocklist --enable-smooth-scrolling --remote-debugging-port={DEV_TOOLS_PORT}"
 os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
 SHORTCUTS_FILE = "shortcuts.json"
 BOOKMARKS_FILE = "bookmarks.json"
@@ -18,7 +19,6 @@ HISTORY_FILE = "history.json"
 DOWNLOADS_FILE = "downloads.json"
 SETTINGS_FILE = "settings.json"
 ICON_PATH = os.path.join(os.path.dirname(__file__), "Icons")
-
 
 incognito_windows = []
 
@@ -47,7 +47,6 @@ app = QApplication(sys.argv)
 app.setWindowIcon(QIcon(os.path.join(ICON_PATH, "PySurf_Icon.ico")))
 app.setFont(QFont("Segoe UI"))
 
-# Apply initial stylesheet based on default theme or loaded settings
 def apply_stylesheet(theme):
     if theme == "light":
         qtmodern.styles.light(app)
@@ -66,7 +65,6 @@ def apply_stylesheet(theme):
             QPushButton.DeleteButton:hover {background-color: #c82333;}
             QProgressBar {border: 1px solid grey; border-radius: 5px; text-align: center; color: black;}
             QProgressBar::chunk {background-color: #5d9cec;}
-            /* Ensure text visibility on buttons */
             QPushButton, QToolButton { color: black; }
             QMenu { background-color: #ffffff; border: 1px solid #ccc; }
             QMenu::item { padding: 5px 15px; color: black;}
@@ -89,7 +87,6 @@ def apply_stylesheet(theme):
             QPushButton.DeleteButton:hover {background-color: #aa3333;}
             QProgressBar {border: 1px solid #666666; border-radius: 5px; text-align: center; color: #eeeeee;}
             QProgressBar::chunk {background-color: #5d9cec;}
-            /* Ensure text visibility on buttons */
             QPushButton, QToolButton { color: #eeeeee; }
             QMenu { background-color: #333333; border: 1px solid #555555; }
             QMenu::item { padding: 5px 15px; color: #eeeeee; }
@@ -209,6 +206,10 @@ class FindDialog(QDialog):
 
         self.matches = 0
         self.current_index = 0
+
+        self.query_input.textChanged.connect(self.start_search)
+        self.next_btn.clicked.connect(self.next_match)
+        self.prev_btn.clicked.connect(self.prev_match)
 
     def start_search(self, query):
         if not query:
@@ -416,6 +417,7 @@ class PySurfWebPage(QWebEnginePage):
     def __init__(self, main_window, profile, parent=None):
         super().__init__(profile, parent)
         self.main_window = main_window
+        self.is_incognito = main_window.is_incognito
 
     def certificateError(self, certificateError):
         current_tab = self.parent().parent()
@@ -424,6 +426,10 @@ class PySurfWebPage(QWebEnginePage):
 
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
         pass
+
+    def createWindow(self, type):
+        return self.main_window.open_new_tab_page(QUrl("about:blank"), is_incognito=self.is_incognito)
+
 
 class BrowserTab(QWidget):
     def __init__(self, parent, url_string, main_window, profile, is_incognito=False):
@@ -438,6 +444,7 @@ class BrowserTab(QWidget):
         self.is_incognito = is_incognito
         self.security_status = {}
         self.find_dialog = FindDialog(self.browser)
+        
         self.find_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
         self.find_shortcut.activated.connect(self.find_dialog.show)
 
@@ -447,11 +454,44 @@ class BrowserTab(QWidget):
         
         self.browser.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
         self.browser.page().fullScreenRequested.connect(self.handle_fullscreen_request)
+        self.browser.page().featurePermissionRequested.connect(self.handle_permission_request)
         self.browser.urlChanged.connect(lambda qurl: self.main_window._handle_url_change(self, qurl))
         self.browser.loadFinished.connect(self.update_tab_title)
         self.browser.loadFinished.connect(self.add_page_to_history)
 
         self.browser.load(QUrl(url_string))
+
+    def handle_permission_request(self, origin, feature):
+        feature_name = self.get_feature_name(feature)
+
+        dialog = QMessageBox()
+        dialog.setWindowTitle("Permission Request")
+        dialog.setText(f"{origin.host()} is asking for access to your {feature_name}.")
+        dialog.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        dialog.setDefaultButton(QMessageBox.Yes)
+
+        result = dialog.exec_()
+
+        if result == QMessageBox.Yes:
+            self.browser.page().setFeaturePermission(origin, feature, 1)
+            print(f"Permission granted for {feature_name} on {origin.host()}")
+        else:
+            self.browser.page().setFeaturePermission(origin, feature, 0)
+            print(f"Permission denied for {feature_name} on {origin.host()}")
+
+    def get_feature_name(self, feature):
+        feature_map = {
+            QWebEnginePage.PermissionFeature.Geolocation: "Geolocation",
+            QWebEnginePage.PermissionFeature.MediaAudioCapture: "Media Audio Capture (Microphone)",
+            QWebEnginePage.PermissionFeature.MediaVideoCapture: "Media Video Capture (Camera)",
+            QWebEnginePage.PermissionFeature.MediaAudioVideoCapture: "Media Audio and Video Capture",
+            QWebEnginePage.PermissionFeature.Notifications: "Notifications",
+            QWebEnginePage.PermissionFeature.MouseLock: "Mouse Lock",
+            QWebEnginePage.PermissionFeature.DesktopVideoCapture: "Desktop Video Capture",
+            QWebEnginePage.PermissionFeature.DesktopAudioVideoCapture: "Desktop Audio and Video Capture",
+            QWebEnginePage.PermissionFeature.ScreenShare: "Screen Share"
+        }
+        return feature_map.get(feature, "an unknown device")
 
     def update_tab_title(self):
         index = self.parent_tabs.indexOf(self)
@@ -502,6 +542,7 @@ class IncognitoWindow(QMainWindow):
         self.downloads_data = []
         self.bookmarks_data = load_data(BOOKMARKS_FILE, default_data=[])
         self.tab_security_status = {}
+        self.is_incognito = True
 
         self.profile.downloadRequested.connect(self.handle_download_requested)
         
@@ -535,8 +576,9 @@ class IncognitoWindow(QMainWindow):
         self.tabs.setCornerWidget(plus_button)
         
         content_and_sidebar_layout.addWidget(self.tabs, 4)
-        
+
         sidebar = QVBoxLayout()
+        # Navigation buttons
         back_btn = QPushButton()
         back_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Back_Icon.svg")))
         back_btn.setIconSize(QSize(24, 24))
@@ -556,6 +598,8 @@ class IncognitoWindow(QMainWindow):
         sidebar.addWidget(refresh_btn)
 
         sidebar.addWidget(create_separator())
+
+        # Search engine and theme settings (shared across all windows)
         self.search_engines = {
             "Google": {"url": "https://www.google.com/search?q=", "str": "G"},
             "Bing": {"url": "https://www.bing.com/search?q=", "str": "B"},
@@ -582,6 +626,7 @@ class IncognitoWindow(QMainWindow):
         sidebar.addWidget(self.theme_button)
         self.update_theme_button_icon()
 
+        # Bookmarks, Downloads, History buttons
         self.bookmarks_menu = QMenu(self)
         bookmarks_btn = QToolButton()
         bookmarks_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Bookmarks_Icon.svg")))
@@ -599,10 +644,12 @@ class IncognitoWindow(QMainWindow):
         history_btn = QPushButton()
         history_btn.setIcon(QIcon(os.path.join(ICON_PATH, "History_Icon.svg")))
         history_btn.setIconSize(QSize(24, 24))
-        history_btn.clicked.connect(self.show_history_dialog) 
+        history_btn.clicked.connect(self.show_history_dialog)
         sidebar.addWidget(history_btn)
         
         sidebar.addWidget(create_separator())
+
+        # Zoom controls
         zoom_in_btn = QToolButton()
         zoom_in_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Zoom_In_Icon.svg")))
         zoom_in_btn.setIconSize(QSize(24, 24))
@@ -614,6 +661,15 @@ class IncognitoWindow(QMainWindow):
         zoom_out_btn.setIconSize(QSize(24, 24))
         zoom_out_btn.clicked.connect(self.zoom_out)
         sidebar.addWidget(zoom_out_btn)
+
+        sidebar.addWidget(create_separator())
+
+        self.dev_tools_btn = QToolButton(self)
+        self.dev_tools_btn.setToolTip("Open Developer Tools (via remote debugging)")
+        self.dev_tools_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Dev_Icon.svg")))
+        self.dev_tools_btn.setIconSize(QSize(24, 24))
+        self.dev_tools_btn.clicked.connect(self.show_dev_tools_window)
+        sidebar.addWidget(self.dev_tools_btn)
         sidebar.addStretch()
 
         content_and_sidebar_layout.addLayout(sidebar, 1)
@@ -665,6 +721,12 @@ class IncognitoWindow(QMainWindow):
         
         tab_index = self.tabs.addTab(browser_tab, "Loading...")
         self.tabs.setCurrentIndex(tab_index)
+
+    def open_new_tab_page(self, qurl, is_incognito=False):
+        browser_tab = BrowserTab(self.tabs, qurl.toString(), self, self.profile, is_incognito)
+        tab_index = self.tabs.addTab(browser_tab, "Loading...")
+        self.tabs.setCurrentIndex(tab_index)
+        return browser_tab.browser.page()
     
     def close_tab(self, i):
         if self.tabs.count() < 2:
@@ -672,7 +734,7 @@ class IncognitoWindow(QMainWindow):
         w = self.tabs.widget(i)
         self.tabs.removeTab(i)
         w.deleteLater()
-    
+
     def back_button_clicked(self):
         current_tab = self.tabs.currentWidget()
         if isinstance(current_tab, BrowserTab):
@@ -704,13 +766,18 @@ class IncognitoWindow(QMainWindow):
             
     def update_ui_on_tab_change(self):
         current_tab = self.tabs.currentWidget()
-        print(f"DEBUG: Tab change detected. New tab is index {self.tabs.indexOf(current_tab)}")
         if isinstance(current_tab, BrowserTab):
+            print(f"DEBUG: Tab change detected. New tab is index {self.tabs.indexOf(current_tab)}. URL: {current_tab.browser.url().toString()}")
             self.url_bar.setText(current_tab.browser.url().toString())
             self.update_security_icon(current_tab)
-        else:
+        elif isinstance(current_tab, HomePage):
+            print("DEBUG: Tab change detected. New tab is homepage.")
             self.url_bar.clear()
-            self.update_security_icon(None)
+            self.update_security_icon(current_tab)
+        else:
+            print("DEBUG: Tab change detected. No active browser tab or homepage found.")
+            self.url_bar.clear()
+            self.security_icon_button.setIcon(QIcon())
             
     def add_page_to_global_history(self, title, url):
         pass
@@ -738,6 +805,8 @@ class IncognitoWindow(QMainWindow):
             download.stateChanged.connect(lambda state: self.handle_download_state_change(download, state))
             self.downloads_dialog.refresh_downloads()
             self.downloads_dialog.show()
+        else:
+            download.cancel()
 
     def update_download_progress(self, download, received_bytes, total_bytes):
         if download.id() in downloads_list:
@@ -751,17 +820,19 @@ class IncognitoWindow(QMainWindow):
     def handle_download_state_change(self, download, state):
         if download.id() in downloads_list:
             downloads_list[download.id()]['state'] = state
-            if state in [QWebEngineDownloadItem.DownloadCompleted, QWebEngineDownloadItem.DownloadCancelled]:
+            if state in [QWebEngineDownloadItem.DownloadCompleted, QWebEngineDownloadItem.DownloadCancelled, QWebEngineDownloadItem.DownloadInterrupted]:
                 download_info = downloads_list.pop(download.id())
                 if 'q_object' in download_info:
                     del download_info['q_object']
+                self.downloads_data.append(download_info)
             self.downloads_dialog.refresh_downloads()
 
     def pause_resume_download(self, download_obj, checked):
         if checked: download_obj.pause()
         else: download_obj.resume()
 
-    def cancel_download(self, download_obj): download_obj.cancel()
+    def cancel_download(self, download_obj):
+        download_obj.cancel()
     
     def show_in_folder(self, path):
         if sys.platform == "win32": QProcess.startDetached("explorer.exe", ["/select,", os.path.normpath(path)])
@@ -869,15 +940,17 @@ class IncognitoWindow(QMainWindow):
         self.update_security_icon(tab)
 
     def update_security_icon(self, tab):
+        print(f"DEBUG: Attempting to update icon for tab at index {self.tabs.indexOf(tab)}. Current tab is index {self.tabs.indexOf(self.tabs.currentWidget())}.")
         if isinstance(tab, BrowserTab):
             icon_path = tab.security_status.get("icon_path")
             if icon_path and os.path.exists(icon_path):
                 self.security_icon_button.setIcon(QIcon(icon_path))
             else:
                 self.security_icon_button.setIcon(QIcon())
-                print(f"DEBUG: Icon not found or path invalid.")
+        elif isinstance(tab, HomePage):
+            self.security_icon_button.setIcon(QIcon(os.path.join(ICON_PATH, "Incognito_Icon.svg")))
         else:
-            self.security_icon_button.setIcon(QIcon(os.path.join(ICON_PATH, "Local_Icon.svg")))
+            self.security_icon_button.setIcon(QIcon())
             
     def show_security_report(self):
         current_tab = self.tabs.currentWidget()
@@ -907,6 +980,11 @@ class IncognitoWindow(QMainWindow):
             self.showNormal()
         request.accept()
 
+    def show_dev_tools_window(self):
+        self.dev_tools_window = QWebEngineView()
+        self.dev_tools_window.setUrl(QUrl("http://localhost:9000"))
+        self.dev_tools_window.show()
+
 
 class MyMainWindow(QMainWindow):
     def __init__(self):
@@ -914,6 +992,7 @@ class MyMainWindow(QMainWindow):
         self.setWindowTitle("PySurf")
         self.resize(1200, 700)
         
+        # Load persistent data
         self.history_data = load_data(HISTORY_FILE, default_data=[])
         self.downloads_data = load_data(DOWNLOADS_FILE, default_data=[])
         self.bookmarks_data = load_data(BOOKMARKS_FILE, default_data=[])
@@ -921,7 +1000,8 @@ class MyMainWindow(QMainWindow):
         self.tab_security_status = {}
         self.ssl_errors_list = []
         self.blocked_requests = []
-        
+        self.is_incognito = False
+
         main_container = QWidget()
         self.setCentralWidget(main_container)
         main_layout = QVBoxLayout(main_container)
@@ -951,6 +1031,7 @@ class MyMainWindow(QMainWindow):
         content_and_sidebar_layout.addWidget(self.tabs, 4)
         
         sidebar = QVBoxLayout()
+        # Navigation buttons
         back_btn = QPushButton()
         back_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Back_Icon.svg")))
         back_btn.setIconSize(QSize(24, 24))
@@ -971,6 +1052,7 @@ class MyMainWindow(QMainWindow):
 
         sidebar.addWidget(create_separator())
 
+        # Search engine settings
         self.search_engines = {
             "Google": {"url": "https://www.google.com/search?q=", "str": "G"},
             "Bing": {"url": "https://www.bing.com/search?q=", "str": "B"},
@@ -996,6 +1078,7 @@ class MyMainWindow(QMainWindow):
         sidebar.addWidget(self.theme_button)
         self.update_theme_button_icon()
 
+        # Bookmarks, Downloads, History, Incognito buttons
         self.bookmarks_menu = QMenu(self)
         bookmarks_btn = QToolButton()
         bookmarks_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Bookmarks_Icon.svg")))
@@ -1013,7 +1096,7 @@ class MyMainWindow(QMainWindow):
         history_btn = QPushButton()
         history_btn.setIcon(QIcon(os.path.join(ICON_PATH, "History_Icon.svg")))
         history_btn.setIconSize(QSize(24, 24))
-        history_btn.clicked.connect(self.show_history_dialog) 
+        history_btn.clicked.connect(self.show_history_dialog)
         sidebar.addWidget(history_btn)
 
         sidebar.addWidget(create_separator())
@@ -1025,6 +1108,8 @@ class MyMainWindow(QMainWindow):
         sidebar.addWidget(incognito_btn)
 
         sidebar.addWidget(create_separator())
+
+        # Zoom controls
         zoom_in_btn = QToolButton()
         zoom_in_btn.setIcon(QIcon(os.path.join(ICON_PATH, "Zoom_In_Icon.svg")))
         zoom_in_btn.setIconSize(QSize(24, 24))
@@ -1036,6 +1121,15 @@ class MyMainWindow(QMainWindow):
         zoom_out_btn.setIconSize(QSize(24, 24))
         zoom_out_btn.clicked.connect(self.zoom_out)
         sidebar.addWidget(zoom_out_btn)
+
+        sidebar.addWidget(create_separator())
+
+        self.dev_tools_button = QToolButton(self)
+        self.dev_tools_button.setToolTip("Open Developer Tools (via remote debugging)")
+        self.dev_tools_button.setIcon(QIcon(os.path.join(ICON_PATH, "Dev_Icon.svg")))
+        self.dev_tools_button.setIconSize(QSize(24, 24))
+        self.dev_tools_button.clicked.connect(self.show_dev_tools_window)
+        sidebar.addWidget(self.dev_tools_button)
         sidebar.addStretch()
 
         content_and_sidebar_layout.addLayout(sidebar, 1)
@@ -1095,10 +1189,16 @@ class MyMainWindow(QMainWindow):
         if not url_string.startswith("http"):
             url_string = "https://" + url_string
         
-        browser_tab = BrowserTab(self.tabs, url_string, self, QWebEngineProfile.defaultProfile())
+        browser_tab = BrowserTab(self.tabs, url_string, self, QWebEngineProfile.defaultProfile(), is_incognito=False)
         
         tab_index = self.tabs.addTab(browser_tab, "Loading...")
         self.tabs.setCurrentIndex(tab_index)
+
+    def open_new_tab_page(self, qurl, is_incognito=False):
+        browser_tab = BrowserTab(self.tabs, qurl.toString(), self, QWebEngineProfile.defaultProfile(), is_incognito)
+        tab_index = self.tabs.addTab(browser_tab, "Loading...")
+        self.tabs.setCurrentIndex(tab_index)
+        return browser_tab.browser.page()
     
     def close_tab(self, i):
         if self.tabs.count() < 2:
@@ -1138,13 +1238,18 @@ class MyMainWindow(QMainWindow):
             
     def update_ui_on_tab_change(self):
         current_tab = self.tabs.currentWidget()
-        print(f"DEBUG: Tab change detected. New tab is index {self.tabs.indexOf(current_tab)}")
         if isinstance(current_tab, BrowserTab):
+            print(f"DEBUG: Tab change detected. New tab is index {self.tabs.indexOf(current_tab)}. URL: {current_tab.browser.url().toString()}")
             self.url_bar.setText(current_tab.browser.url().toString())
             self.update_security_icon(current_tab)
-        else:
+        elif isinstance(current_tab, HomePage):
+            print("DEBUG: Tab change detected. New tab is homepage.")
             self.url_bar.clear()
-            self.update_security_icon(None)
+            self.update_security_icon(current_tab)
+        else:
+            print("DEBUG: Tab change detected. No active browser tab or homepage found.")
+            self.url_bar.clear()
+            self.security_icon_button.setIcon(QIcon())
             
     def add_page_to_global_history(self, title, url):
         if not self.history_data or (title, url) != self.history_data[-1]:
@@ -1179,6 +1284,8 @@ class MyMainWindow(QMainWindow):
             download.stateChanged.connect(lambda state: self.handle_download_state_change(download, state))
             self.downloads_dialog.refresh_downloads()
             self.downloads_dialog.show()
+        else:
+            download.cancel()
 
     def update_download_progress(self, download, received_bytes, total_bytes):
         if download.id() in downloads_list:
@@ -1192,7 +1299,7 @@ class MyMainWindow(QMainWindow):
     def handle_download_state_change(self, download, state):
         if download.id() in downloads_list:
             downloads_list[download.id()]['state'] = state
-            if state in [QWebEngineDownloadItem.DownloadCompleted, QWebEngineDownloadItem.DownloadCancelled]:
+            if state in [QWebEngineDownloadItem.DownloadCompleted, QWebEngineDownloadItem.DownloadCancelled, QWebEngineDownloadItem.DownloadInterrupted]:
                 download_info = downloads_list.pop(download.id())
                 if 'q_object' in download_info:
                     del download_info['q_object']
@@ -1204,7 +1311,8 @@ class MyMainWindow(QMainWindow):
         if checked: download_obj.pause()
         else: download_obj.resume()
 
-    def cancel_download(self, download_obj): download_obj.cancel()
+    def cancel_download(self, download_obj):
+        download_obj.cancel()
     
     def show_in_folder(self, path):
         if sys.platform == "win32": QProcess.startDetached("explorer.exe", ["/select,", os.path.normpath(path)])
@@ -1295,10 +1403,10 @@ class MyMainWindow(QMainWindow):
         else:
              tab.security_status = {"status": "Local Page", "description": "This is a local browser page.", "icon_path": os.path.join(ICON_PATH, "Local_Icon.svg"), "icon_color": "#6c757d"}
         
+        print(f"DEBUG: Tab at index {self.tabs.indexOf(tab)} status set to: {tab.security_status.get('status', 'Unknown')}")
         self.update_security_icon(tab)
 
     def handle_ssl_errors(self, tab, ssl_errors):
-        print("DEBUG: SSL Error detected.")
         error_descriptions = []
         for error in ssl_errors:
             error_descriptions.append(error.errorDescription())
@@ -1320,8 +1428,10 @@ class MyMainWindow(QMainWindow):
                 self.security_icon_button.setIcon(QIcon(icon_path))
             else:
                 self.security_icon_button.setIcon(QIcon())
-        else:
+        elif isinstance(tab, HomePage):
             self.security_icon_button.setIcon(QIcon(os.path.join(ICON_PATH, "Local_Icon.svg")))
+        else:
+            self.security_icon_button.setIcon(QIcon())
             
     def show_security_report(self):
         current_tab = self.tabs.currentWidget()
@@ -1351,11 +1461,17 @@ class MyMainWindow(QMainWindow):
             self.showNormal()
         request.accept()
 
+    def show_dev_tools_window(self):
+        self.dev_tools_window = QWebEngineView()
+        self.dev_tools_window.setUrl(QUrl("http://localhost:9000"))
+        self.dev_tools_window.show()
+
+
 if __name__ == "__main__":
     required_icons = ["Safe_Icon.svg", "Unsafe_Icon.svg", "Incognito_Icon.svg", "Plus_Icon.svg",
                       "Back_Icon.svg", "Forward_Icon.svg", "Refresh_Icon.svg", "Bookmarks_Icon.svg",
                       "Downloads_Icon.svg", "History_Icon.svg", "Zoom_In_Icon.svg", "Zoom_Out_Icon.svg",
-                      "Light_Mode_Icon.svg", "Dark_Mode_Icon.svg"]
+                      "Light_Mode_Icon.svg", "Dark_Mode_Icon.svg", "Dev_Icon.svg", "Local_Icon.svg", "Blocked_Icon.svg"]
     for icon_name in required_icons:
         if not os.path.exists(os.path.join(ICON_PATH, icon_name)):
             print(f"Warning: Missing icon file: {icon_name} at {ICON_PATH}. Please ensure all icons are in place.")
